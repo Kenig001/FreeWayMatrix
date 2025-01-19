@@ -83,5 +83,4 @@ curl -k https://<домен>/_matrix/client/versions
 ### Автор
 
 **Создано Kenig01 ❤️**
-```
 
