@@ -29,3 +29,29 @@
    ```bash
    wget https://raw.githubusercontent.com/<ВашНик>/FreeWayMatrix/main/freeway-matrix.sh
    chmod +x freeway-matrix.sh
+Запустить:
+sudo ./freeway-matrix.sh
+Ввести:
+Домен (например, matrix.example.com)
+Email (для Let’s Encrypt)
+Скрипт:
+
+Поставит нужные пакеты (docker.io, docker-compose, ufw, certbot).
+Настроит UFW и откроет порты.
+Выпустит сертификаты Let’s Encrypt.
+Сгенерирует docker-compose.yml и nginx.conf.
+Поднимет контейнеры с Synapse и Nginx.
+Результат 🎉
+Matrix-сервер: Synapse слушает http://synapse:8008 внутри Docker, наружу выходит через Nginx.
+Nginx: Порты 80 (редирект) и 443 (HTTPS).
+SSL: Файлы в /etc/letsencrypt/live/<домен>.
+Рабочий Matrix: Доступен по https://<домен>. Федерация тоже будет идти на 443.
+Проверка 👀
+curl:
+bash
+Копировать
+curl -k https://<домен>/_matrix/client/versions
+Будет JSON о версиях Matrix API.
+Клиент (Element и др.):
+Задайте https://<домен> как homeserver.
+Попробуйте зарегистрироваться или войти.
