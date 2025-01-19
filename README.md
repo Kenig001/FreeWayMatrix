@@ -5,15 +5,22 @@
 
 ---
 
-## Запуск скрипта
+## Установка
 
-```bash
-sudo ./freeway-matrix.sh
-```
+1. Клонируйте репозиторий:
+   ```bash
+   git clone <URL вашего репозитория>
+   cd <название папки>
+   ```
 
-Введите:
-- **Домен** (например, `matrix.example.com`)
-- **Email** (для Let’s Encrypt)
+2. Запустите скрипт:
+   ```bash
+   sudo ./freeway-matrix.sh
+   ```
+
+3. Введите:
+   - **Домен** (например, `matrix.example.com`)
+   - **Email** (для Let’s Encrypt)
 
 ---
 
@@ -61,3 +68,4 @@ curl -k https://<домен>/_matrix/client/versions
 
 **Создано Kenig01 ❤️**
 ```
+
