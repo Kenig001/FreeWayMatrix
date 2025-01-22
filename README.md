@@ -27,7 +27,7 @@
 ## Установка и запуск ❓
 1. **Скачать скрипт**:
    ```bash
-   wget https://raw.githubusercontent.com/<ВашНик>/FreeWayMatrix/main/freeway-matrix.sh
+   wget https://raw.githubusercontent.com/Kenig001/FreeWayMatrix/main/freeway-matrix.sh
    chmod +x freeway-matrix.sh
 **Запуск**
    
