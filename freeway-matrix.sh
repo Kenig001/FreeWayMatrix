@@ -1,58 +1,127 @@
 #!/usr/bin/env bash
 
-set -e
+set -euo pipefail
+
 trap 'tput cnorm; clear; exit' INT
 tput civis
 clear
 
-echo "=== Установка Matrix Synapse с Nginx ==="
+COLUMNS=$(tput cols)
+ROWS=$(tput lines)
+WORD="FreeWay"
+WORD_LENGTH=${#WORD}
 
-# Установка необходимых пакетов
-echo "=== Установка необходимых пакетов: Docker, Docker Compose, Nginx, ufw, certbot ==="
+if [ "$WORD_LENGTH" -gt "$COLUMNS" ]; then
+  START_X=0
+  GAP=1
+else
+  TOTAL_GAP=$((COLUMNS - WORD_LENGTH))
+  START_X=$((TOTAL_GAP / 2))
+  GAP=2
+fi
+
+declare -A HEIGHT
+for (( i=0; i<WORD_LENGTH; i++ )); do
+  HEIGHT[$i]=0
+done
+
+random_char() {
+  printf "\033[35m%s\033[0m" "$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c1)"
+}
+
+HALF_ROWS=$((ROWS / 2))
+
+while true; do
+  done_flag=true
+  for (( i=0; i<WORD_LENGTH; i++ )); do
+    current_height=${HEIGHT[$i]}
+    if [ "$current_height" -ge "$HALF_ROWS" ]; then
+      continue
+    fi
+    X=$((START_X + i * GAP))
+    if [ "$X" -ge 0 ] && [ "$X" -lt "$COLUMNS" ]; then
+      tput cup "$current_height" "$X"
+      random_char
+    fi
+    HEIGHT[$i]=$((current_height + 1))
+    done_flag=false
+  done
+  if $done_flag; then
+    break
+  fi
+  sleep 0.03
+done
+
+for (( y=0; y<HALF_ROWS; y++ )); do
+  tput cup "$y" 0
+  printf "%${COLUMNS}s" " "
+done
+
+ASCII_FREEWAY="
+░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░░▒▓██████▓▒░░▒▓█▓▒░░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░
+░▒▓██████▓▒░ ░▒▓███████▓▒░░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░░▒▓██████▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓████████▓▒░░▒▓█████████████▓▒░░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
+"
+
+tput cup "$HALF_ROWS" 0
+echo -e "\033[35m$ASCII_FREEWAY\033[0m"
+
+sleep 2
+tput cnorm
+echo
+echo "Created by Kenig001"
+sleep 2
+clear
+
+echo "=== Installing necessary packages: Docker, Docker Compose, ufw, certbot ==="
 sudo apt-get update
-sudo apt-get install -y docker.io docker-compose nginx ufw certbot
+sudo apt-get install -y docker.io docker-compose ufw certbot
 
-# Ввод домена и электронной почты
 echo
-read -rp "Введите домен (пример: matrix.example.com): " DOMAIN
+read -rp "Enter domain (example: matrix.example.com): " DOMAIN
 if [ -z "$DOMAIN" ]; then
-  echo "Домен не может быть пустым!"
+  echo "Domain cannot be empty!"
   exit 1
 fi
 
-read -rp "Введите e-mail (пример: mail@example.com): " EMAIL
+read -rp "Enter e-mail (example: mail@example.com): " EMAIL
 if [ -z "$EMAIL" ]; then
-  echo "E-mail не может быть пустым!"
+  echo "E-mail cannot be empty!"
   exit 1
 fi
 
-# Настройка брандмауэра (UFW)
 echo
-echo "Открываем порты 22, 80, 443, 8008, 8448"
+echo "Opening ports 22, 80, 443, 8008, 8448"
 sudo ufw allow 22/tcp
 sudo ufw allow 80/tcp
 sudo ufw allow 443/tcp
 sudo ufw allow 8008/tcp
 sudo ufw allow 8448/tcp
-UF=$(sudo ufw status | head -n1)
-if [[ "$UF" == "Status: inactive" ]]; then
+
+UFW_STATUS=$(sudo ufw status | head -n1)
+if [[ "$UFW_STATUS" == "Status: inactive" ]]; then
   sudo ufw enable
 fi
 
-# Получение SSL-сертификатов
 echo
-echo "Убедитесь, что никакой другой сервис не слушает порт 80"
-read -rp "Нажмите Enter для продолжения..."
+echo "Ensure no other service is listening on port 80"
+read -rp "Press Enter to continue..."
+
 sudo certbot certonly --standalone -m "$EMAIL" --agree-tos -d "$DOMAIN"
 
-# Настройка прав доступа к сертификатам
-echo "=== Настройка прав доступа для сертификатов ==="
-sudo chmod -R 755 /etc/letsencrypt/live/$DOMAIN
-sudo chmod -R 755 /etc/letsencrypt/archive/$DOMAIN
+echo "=== Setting permissions for certificates ==="
+sudo chmod -R 755 "/etc/letsencrypt/live/$DOMAIN"
+sudo chmod -R 755 "/etc/letsencrypt/archive/$DOMAIN"
 sudo chmod 755 /etc/letsencrypt
 
-# Настройка Nginx
-echo "=== Создаём конфигурацию Nginx ==="
+echo "=== Installing Nginx ==="
+sudo apt-get install -y nginx
+
+echo "=== Creating Nginx configuration ==="
 sudo bash -c "cat > /etc/nginx/sites-available/$DOMAIN" <<EOF
 server {
     listen 80;
@@ -91,12 +160,11 @@ server {
 }
 EOF
 
-sudo ln -s /etc/nginx/sites-available/$DOMAIN /etc/nginx/sites-enabled/
+sudo ln -s "/etc/nginx/sites-available/$DOMAIN" /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl restart nginx
 
-# Создание docker-compose.yml
-echo "=== Создаём docker-compose.yml ==="
+echo "=== Creating docker-compose.yml ==="
 cat > docker-compose.yml <<EOF
 version: '3.7'
 services:
@@ -114,18 +182,15 @@ services:
     restart: always
 EOF
 
-# Запуск Synapse
-echo "=== Запуск Synapse ==="
 docker-compose down
 docker-compose up -d
 
-# Генерация homeserver.yaml
-echo "=== Генерация конфигурации Synapse (homeserver.yaml) ==="
+echo "=== Generating base configuration file homeserver.yaml ==="
 docker-compose exec synapse generate
+
+echo "=== Configuring homeserver.yaml ==="
 HOMESERVER_YAML="./data/homeserver.yaml"
-if [ -f "$HOMESERVER_YAML" ]; then
-  echo "Обновление $HOMESERVER_YAML"
-  cat > "$HOMESERVER_YAML" <<EOF
+cat > "$HOMESERVER_YAML" <<EOF
 listeners:
   - port: 8008
     tls: false
@@ -170,12 +235,9 @@ enable_registration_without_verification: true
 tls_certificate_path: "/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 tls_private_key_path: "/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 EOF
-else
-  echo "Ошибка: файл $HOMESERVER_YAML не найден!"
-fi
 
 echo "============================================================="
-echo "Matrix Synapse успешно установлен!"
-echo "Домен: $DOMAIN"
-echo "Проверка: https://$DOMAIN/_matrix/client/versions"
+echo "Matrix Synapse has been successfully installed!"
+echo "Domain: $DOMAIN"
+echo "Check: https://$DOMAIN/_matrix/client/versions"
 echo "============================================================="
