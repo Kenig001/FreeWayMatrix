@@ -3,12 +3,12 @@ set -euo pipefail
 trap 'tput cnorm; clear; exit' INT
 tput civis
 clear
-# Variables
+
+# Variables for animation and ASCII art
 COLUMNS=$(tput cols)
 ROWS=$(tput lines)
 WORD="FreeWay"
 WORD_LENGTH=${#WORD}
-SYNAPSE_DIR="synapse"
 if [ "$WORD_LENGTH" -gt "$COLUMNS" ]; then
   START_X=0
   GAP=1
@@ -25,6 +25,8 @@ random_char() {
   printf "\033[35m%s\033[0m" "$(tr -dc 'A-Za-z0-9' < /dev/urandom | head -c1)"
 }
 HALF_ROWS=$((ROWS / 2))
+
+# Animation loop
 while true; do
   done_flag=true
   for (( i=0; i<WORD_LENGTH; i++ )); do
@@ -45,6 +47,32 @@ while true; do
   fi
   sleep 0.03
 done
+
+# Clear half of the screen
+for (( y=0; y<HALF_ROWS; y++ )); do
+  tput cup "$y" 0
+  printf "%${COLUMNS}s" " "
+done
+
+# ASCII FreeWay Art
+ASCII_FREEWAY="
+░▒▓████████▓▒░▒▓███████▓▒░░▒▓████████▓▒░▒▓████████▓▒░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░░▒▓██████▓▒░░▒▓█▓▒░░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░
+░▒▓██████▓▒░ ░▒▓███████▓▒░░▒▓██████▓▒░ ░▒▓██████▓▒░ ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░░▒▓██████▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░      ░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░░▒▓█▓▒░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
+░▒▓█▓▒░      ░▒▓█▓▒░░▒▓█▓▒░▒▓████████▓▒░▒▓████████▓▒░░▒▓█████████████▓▒░░▒▓█▓▒░░▒▓█▓▒░  ░▒▓█▓▒░
+"
+
+# Display ASCII FreeWay Art
+tput cup "$HALF_ROWS" 0
+echo -e "\033[35m$ASCII_FREEWAY\033[0m"
+sleep 2
+tput cnorm
+echo
+echo "Created by Kenig001"
+sleep 2
 clear
 
 # Проверка прав администратора
@@ -148,6 +176,7 @@ if [ $? -ne 0 ]; then
 fi
 
 # Create folder for Synapse
+SYNAPSE_DIR="synapse"
 mkdir -p "$SYNAPSE_DIR"
 cd "$SYNAPSE_DIR"
 echo "=== Creating docker-compose.yml ==="
@@ -177,7 +206,20 @@ if [ $? -ne 0 ]; then
 fi
 
 # Generate base configuration
-sudo docker-compose exec synapse generate
+echo "Generating base configuration..."
+sudo docker-compose exec synapse python3 -m synapse.app.homeserver --generate-config --server-name=${DOMAIN} -c homeserver.yaml.template
+if [ $? -ne 0 ]; then
+  echo "Failed to generate base configuration."
+  exit 1
+fi
+
+# Copy and modify the generated configuration
+echo "Copying and modifying the generated configuration..."
+sudo docker cp synapse:/data/homeserver.yaml ./data/homeserver.yaml
+if [ $? -ne 0 ]; then
+  echo "Failed to copy the generated configuration."
+  exit 1
+fi
 
 # Configure homeserver.yaml
 HOMESERVER_YAML="./data/homeserver.yaml"
@@ -218,6 +260,14 @@ enable_registration_without_verification: true
 tls_certificate_path: "/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 tls_private_key_path: "/etc/letsencrypt/live/$DOMAIN/privkey.pem"
 EOF
+
+# Restart Synapse to apply changes
+echo "Restarting Synapse to apply changes..."
+sudo docker-compose restart synapse
+if [ $? -ne 0 ]; then
+  echo "Failed to restart Synapse container."
+  exit 1
+fi
 
 # Completion message
 echo "============================================================="
